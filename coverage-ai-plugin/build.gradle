@@ -1,3 +1,5 @@
+import com.github.spotbugs.snom.Effort
+import com.github.spotbugs.snom.Confidence
 plugins {
     id 'groovy'
     id 'java-gradle-plugin'
