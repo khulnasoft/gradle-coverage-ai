@@ -37,16 +37,16 @@ jacoco {
 jacocoTestReport {
     afterEvaluate {
         classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ['com/khulnasoft/cover/plugin/CoverageAiPlugin',
-                                        'com/khulnasoft/cover/plugin/CoverageAiTask',
-                                        'com/khulnasoft/cover/plugin/CoverageAi',
-                                        'com/khulnasoft/cover/plugin/CoverageAiBuilder',
-                                        'com/khulnasoft/cover/plugin/CoverageAiExtension',
-                                        'com/khulnasoft/cover/plugin/CoverError',
-                                        'com/khulnasoft/cover/plugin/ModelPrompter',
-                                        'com/khulnasoft/cover/plugin/SourceFilePrompt',
-                                        'com/khulnasoft/cover/plugin/TestInfoResponse',
-                                        'com/khulnasoft/cover/plugin/CoverageAiExecutor'])
+            fileTree(dir: it, exclude: ['com/khulnasoft/coverage/plugin/CoverageAiPlugin',
+                                        'com/khulnasoft/coverage/plugin/CoverageAiTask',
+                                        'com/khulnasoft/coverage/plugin/CoverageAi',
+                                        'com/khulnasoft/coverage/plugin/CoverageAiBuilder',
+                                        'com/khulnasoft/coverage/plugin/CoverageAiExtension',
+                                        'com/khulnasoft/coverage/plugin/CoverError',
+                                        'com/khulnasoft/coverage/plugin/ModelPrompter',
+                                        'com/khulnasoft/coverage/plugin/SourceFilePrompt',
+                                        'com/khulnasoft/coverage/plugin/TestInfoResponse',
+                                        'com/khulnasoft/coverage/plugin/CoverageAiExecutor'])
         }))
     }
     reports {
@@ -60,17 +60,17 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             excludes = [
-                    'com.khulnasoft.cover.plugin.CoverageAiPlugin',
-                    'com.khulnasoft.cover.plugin.CoverageAiTask',
+                    'com.khulnasoft.coverage.plugin.CoverageAiPlugin',
+                    'com.khulnasoft.coverage.plugin.CoverageAiTask',
                     'sun.util.resources.cldr.provider.CLDRLocaleDataMetaInfo',
-                    'com.khulnasoft.cover.plugin.CoverageAi',
-                    'com.khulnasoft.cover.plugin.CoverageAiBuilder',
-                    'com.khulnasoft.cover.plugin.CoverageAiExtension',
-                    'com.khulnasoft.cover.plugin.CoverError',
-                    'com.khulnasoft.cover.plugin.ModelPrompter',
-                    'com.khulnasoft.cover.plugin.SourceFilePrompt',
-                    'com.khulnasoft.cover.plugin.TestInfoResponse',
-                    'com.khulnasoft.cover.plugin.CoverageAiExecutor'
+                    'com.khulnasoft.coverage.plugin.CoverageAi',
+                    'com.khulnasoft.coverage.plugin.CoverageAiBuilder',
+                    'com.khulnasoft.coverage.plugin.CoverageAiExtension',
+                    'com.khulnasoft.coverage.plugin.CoverError',
+                    'com.khulnasoft.coverage.plugin.ModelPrompter',
+                    'com.khulnasoft.coverage.plugin.SourceFilePrompt',
+                    'com.khulnasoft.coverage.plugin.TestInfoResponse',
+                    'com.khulnasoft.coverage.plugin.CoverageAiExecutor'
 
             ]
             element = 'CLASS'

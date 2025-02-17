@@ -1,0 +1,6 @@
+/.gradle
+/.idea
+/build
+.khulnasoft
+/src/test/resources/jacocoTestReport.csv
+/.qodo/

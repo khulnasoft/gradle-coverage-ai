@@ -1,0 +1,14 @@
+/coverage-ai-plugin/.gradle/
+/coverage-ai-plugin/.idea/
+/coverage-ai-plugin/build/
+/coverage-ai-plugin/.java-version
+/build/
+/.idea/
+/.gradle/
+/coverage-ai-plugin/reports/
+/reports/
+.khulnasoft
+/test-project/build/
+/test-project/run.log
+/test-project/test_results.html
+/test-project/gradle/libs.versions.toml

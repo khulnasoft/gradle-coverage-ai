@@ -4,7 +4,7 @@
 #### Gradle version 8.5 should only be used nothing older than this.
 
 #### General Project Structure
-- **Package Naming**: Use the reverse domain name convention for package names. For example, `com.khulnasoft.cover.plugin`.
+- **Package Naming**: Use the reverse domain name convention for package names. For example, `com.khulnasoft.coverage.plugin`.
 - **Class Naming**: Use PascalCase for class names. For example, `CoverageAiBuilder`, `CoverageAiExecutor`.
 - **Interface Naming**: Prefix interface names with an appropriate noun. For example, `CoverageAi`.
 - **Development**: All requests to you are in the context for developing a Gradle Plugin and Gradle task. The classes that are implemented and will be run are the following:
@@ -27,7 +27,7 @@ org.gradle.api.Plugin<Project>;
   ```java
   project.getTasks().register("coverageAiTask", CoverageAiTask.class, task -> {
       task.setGroup("verification");
-      task.setDescription("Runs the coverage ai task attempting to increase code coverage");
+      task.setDescription("Runs the cover agent task attempting to increase code coverage");
   });
   ```
 

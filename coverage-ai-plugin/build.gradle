@@ -44,11 +44,13 @@ dependencies {
 
 gradlePlugin {
     plugins {
+        website = 'https://github.com/Khulnasoft/gradle-coverage-ai'
+        vcsUrl = 'https://github.com/Khulnasoft/gradle-coverage-ai.git'
         coverageAi {
             id = 'com.khulnasoft.plugin.coverage-ai'
-            implementationClass = 'com.khulnasoft.cover.plugin.CoverageAiPlugin'
+            implementationClass = 'com.khulnasoft.coverage.plugin.CoverageAiPlugin'
             displayName = 'Coverage Ai Plugin'
-            description = 'A plugin to use Coverage Ai in Gradle. https://github.com/khulnasoft/coverage-ai?tab=readme-ov-file#installation-and-usage'
+            description = 'A plugin to use Coverage Ai in Gradle. https://github.com/Khulnasoft/coverage-ai?tab=readme-ov-file#installation-and-usage'
             tags.addAll('coverage-ai', 'code-quality', 'unit-testing')
 
         }
@@ -112,8 +114,8 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             excludes = [
-                    'com.khulnasoft.cover.plugin.CoverageAiPlugin',
-                    'com.khulnasoft.cover.plugin.CoverageAiTask',
+                    'com.khulnasoft.coverage.plugin.CoverageAiPlugin',
+                    'com.khulnasoft.coverage.plugin.CoverageAiTask',
                     'sun.util.resources.cldr.provider.CLDRLocaleDataMetaInfo'
             ]
             element = 'CLASS'
