@@ -210,9 +210,8 @@ public class CoverageAi {
   }
     String standAloneJunit = dependencyHelper
         .findNeededJars("org.junit.platform:junit-platform-console-standalone:" + junitPlatformVersion).get(0);
-    String jacocoAgent = dependencyHelper.findNeededJars("org.jacoco:org.jacoco.agent:" + jacocoAgentVersion + ":runtime").get(0);
-        .findNeededJars("org.junit.platform:junit-platform-console-standalone:1.11.0").get(0);
-    String jacocoAgent = dependencyHelper.findNeededJars("org.jacoco:org.jacoco.agent:0.8.11:runtime").get(0);
+    String jacocoAgent = dependencyHelper
+        .findNeededJars("org.jacoco:org.jacoco.agent:" + jacocoAgentVersion + ":runtime").get(0);
     String builder = "";
     if (javaTestClassPath.isPresent()) {
       builder = "java -javaagent:" + jacocoAgent + "=destfile=" + jacocExecPath + " -cp " + standAloneJunit + ":"
