@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'groovy'
+    id 'com.khulnasoft.plugin.coverage-ai' version '0.0.2'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+coverageAi {
+    apiKey = System.getenv("OPENAI_API_KEY")
+    coverageAiBinaryPath = System.getenv("COVERAGE_AI")
+    coverage = 25
+    iterations = 3
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        csv.required = true
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
