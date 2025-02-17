@@ -42,7 +42,6 @@ public class CoverageAi {
   private final Logger logger;
   private final String junitPlatformVersion;
   private final String jacocoAgentVersion;
-  private final Logger logger;
   private final OpenAiChatModel.OpenAiChatModelBuilder openAiChatModelBuilder;
   private final Map<File, String> testToSourceFileMatches = new HashMap<>();
   private ModelPrompter modelPrompter;
