@@ -40,6 +40,9 @@ public class CoverageAi {
   private final String coverageAiBinaryPath;
   private final Project project;
   private final Logger logger;
+  private final String junitPlatformVersion;
+  private final String jacocoAgentVersion;
+  private final Logger logger;
   private final OpenAiChatModel.OpenAiChatModelBuilder openAiChatModelBuilder;
   private final Map<File, String> testToSourceFileMatches = new HashMap<>();
   private ModelPrompter modelPrompter;
@@ -59,6 +62,7 @@ public class CoverageAi {
     this.coverage = builder.getCoverage();
     this.coverageAiBinaryPath = builder.getCoverageAiBinaryPath();
     this.modelPrompter = builder.getModelPrompter();
+    this.jacocoCliVersion = builder.getJacocoCliVersion();
     this.javaClassPath = builder.getJavaClassPath();
     this.javaTestClassPath = builder.getJavaTestClassPath();
     this.projectPath = builder.getProjectPath();
@@ -67,7 +71,9 @@ public class CoverageAi {
     this.coverageAiExecutor = builder.getCoverageAiExecutor();
     this.project = builder.getProject();
     this.logger = project.getLogger();
-    this.openAiChatModelBuilder = builder.openAiChatModelBuilder();
+    this.junitPlatformVersion = builder.getJunitPlatformVersion();
+    this.jacocoAgentVersion = builder.getJacocoAgentVersion();
+  }
     this.dependencyHelper = new DependencyHelper(this.project, this.logger);
   }
 
@@ -95,7 +101,6 @@ public class CoverageAi {
 
     SourceMatchResult result = findMatchingSourceFiles(javaTestSourceFiles);
     testToSourceFileMatches.putAll(result.testToSourceMap());
-    //Map<File, String> completeMapping = result.testToSourceMap();
     for (File sourceFile : result.remainingSourceFiles()) {
       processTestFileGeneration(sourceFile, framework, testToSourceFileMatches);
     }
@@ -104,17 +109,18 @@ public class CoverageAi {
 
 
   private void setJavaTestClassPath() {
+  private void setJavaTestClassPath() {
     JavaCompile javaTestCompileTask = project.getTasks().withType(JavaCompile.class).findByName("compileTestJava");
     if (javaTestCompileTask != null) {
       javaTestClassPath = java.util.Optional.of(buildClassPath(javaTestCompileTask));
       FileTree sourceFiles = javaTestCompileTask.getSource();
       Set<File> sourceDirs = sourceFiles.getFiles();
+      javaTestSourceFiles.clear();
       javaTestSourceFiles.addAll(sourceDirs);
     }
   }
-
   private String buildClassPath(JavaCompile javaCompileTask) {
-    StringBuilder builder = new StringBuilder();
+    builder.append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath()).append(PATH_SEPARATOR);
     builder.append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath()).append(":");
     for (File clFile : javaCompileTask.getClasspath().getFiles()) {
       builder.append(clFile.getAbsolutePath()).append(PATH_SEPARATOR);
@@ -132,6 +138,8 @@ public class CoverageAi {
       javaClassDir = java.util.Optional.of(classesDir.getAbsolutePath());
       FileTree sourceFiles = javaCompileTask.getSource();
       Set<File> sourceDirs = sourceFiles.getFiles();
+      javaSourceDir.clear();
+      javaSourceFiles.clear();
       for (File srcDir : sourceDirs) {
         javaSourceDir.add(srcDir.getAbsolutePath());
         javaSourceFiles.add(srcDir);
@@ -148,27 +156,27 @@ public class CoverageAi {
     ChatLanguageModel model =
         openAiChatModelBuilder.apiKey(this.apiKey).modelName(GPT_4_O).maxTokens(MAX_TOKENS).build();
     this.modelPrompter = new ModelPrompter(logger, model, new ModelUtility(logger));
-  }
-
   private void initDirectories() {
     Directory projectDirectory = project.getLayout().getProjectDirectory();
     projectPath = projectDirectory.getAsFile().getAbsolutePath();
     logger.debug("Root Project path {}", projectPath);
     File buildDir = project.getLayout().getBuildDirectory().getAsFile().get();
-    if (!buildDir.exists()) {
-      boolean created = buildDir.mkdirs();
-      if (created) {
-        logger.debug("Build directory created: {}", buildDir.getAbsolutePath());
-      } else {
-        logger.error("Failed to create build directory: {}", buildDir.getAbsolutePath());
-      }
-    } else {
-      logger.debug("Build directory already exists: {}", buildDir.getAbsolutePath());
+    try {
+      Files.createDirectories(buildDir.toPath());
+      logger.debug("Build directory created or already exists: {}", buildDir.getAbsolutePath());
+    } catch (IOException e) {
+      logger.error("Failed to create build directory: {}", buildDir.getAbsolutePath(), e);
     }
+    buildDirectory = buildDir.getAbsolutePath();
+  }
     buildDirectory = buildDir.getAbsolutePath();
   }
 
   private void deleteFileIfExists(String filePath) {
+    if (filePath == null || filePath.isEmpty()) {
+      logger.warn("File path is null or empty, skipping deletion.");
+      return;
+    }
     Path path = Paths.get(filePath);
     try {
       if (Files.exists(path)) {
@@ -180,6 +188,12 @@ public class CoverageAi {
     }
   }
 
+  /**
+   * Converts a list of strings into a single string with each element separated by the system path separator.
+   *
+   * @param list the list of strings to be converted
+  private String jacocoJavaReport(String reportPath, String execPath) throws CoverError {
+    List<String> jars = dependencyHelper.findNeededJars("org.jacoco:org.jacoco.cli:" + jacocoCliVersion);
   private String convertListToString(List<String> list) {
     return String.join(PATH_SEPARATOR, list);
   }
@@ -195,9 +209,9 @@ public class CoverageAi {
     return "java -cp " + jarPath + " org.jacoco.cli.internal.Main report " + execPath + " --classfiles " + classFiles
         + " --sourcefiles " + sourcePath + " --xml " + reportPath;
   }
-
-  private String javaAgentCommand(String jacocExecPath) throws CoverError {
     String standAloneJunit = dependencyHelper
+        .findNeededJars("org.junit.platform:junit-platform-console-standalone:" + junitPlatformVersion).get(0);
+    String jacocoAgent = dependencyHelper.findNeededJars("org.jacoco:org.jacoco.agent:" + jacocoAgentVersion + ":runtime").get(0);
         .findNeededJars("org.junit.platform:junit-platform-console-standalone:1.11.0").get(0);
     String jacocoAgent = dependencyHelper.findNeededJars("org.jacoco:org.jacoco.agent:0.8.11:runtime").get(0);
     String builder = "";
@@ -210,25 +224,33 @@ public class CoverageAi {
     return builder;
   }
 
-  public void javaCompileCommand() {
-    JavaCompile javaCompileTask = project.getTasks().withType(JavaCompile.class).findByName("compileJava");
-    StringBuilder builder = new StringBuilder();
-    if (javaClassPath.isPresent()) {
-      builder.append(JAVAC_COMMAND);
-      CompileOptions options = javaCompileTask.getOptions();
-      for (String arg : options.getAllCompilerArgs()) {
-        builder.append(arg).append(" ");
+    if (javaCompileTask != null) {
+      StringBuilder builder = new StringBuilder();
+      if (javaClassPath.isPresent()) {
+        builder.append(JAVAC_COMMAND);
+        CompileOptions options = javaCompileTask.getOptions();
+        for (String arg : options.getAllCompilerArgs()) {
+          builder.append(arg).append(" ");
+        }
+        builder.append("-d ").append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath())
+            .append(" ");
+        builder.append("-classpath ");
+        builder.append(javaClassPath.get());
+        builder.append(" ");
+        for (File sourceFile : javaCompileTask.getSource().getFiles()) {
+          builder.append(sourceFile.getAbsolutePath()).append(" ");
+        }
+        javaCompileCommand = Optional.ofNullable(builder.toString());
+      } else {
+        logger.error("No Java class path provided");
       }
-      builder.append("-d ").append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath())
-          .append(" ");
-      builder.append("-classpath ");
-      builder.append(javaClassPath.get());
-      builder.append(" ");
-      for (File sourceFile : javaCompileTask.getSource().getFiles()) {
-        builder.append(sourceFile.getAbsolutePath()).append(" ");
+      Configuration testConfiguration = container.findByName("testImplementation");
+      if (testConfiguration == null) {
+        logger.error("testImplementation configuration not found, defaulting to Junit5");
+        return "junit5";
       }
-      javaCompileCommand = Optional.ofNullable(builder.toString());
-    } else {
+      DependencySet dependencies = testConfiguration.getDependencies();
+    }
       logger.error("No Java class path provided");
     }
   }
@@ -247,34 +269,29 @@ public class CoverageAi {
       Optional<String> detectedFramework =
           frameworkChecks.stream().filter(check -> dependencies.stream().anyMatch(d -> check.matches(d)))
               .map(FrameworkCheck::getFramework).findFirst();
-
-      detectedFramework.ifPresent(framework -> logger.debug(framework));
-      return detectedFramework.orElse("junit5");
-    } catch (Exception e) {
-      logger.error("Failure in determining testing framework returning Junit5");
-      return "junit5";
-    }
-  }
-
-  public void invoke() {
-    logger.debug("Path to coverageAiBinaryPath {}", coverageAiBinaryPath);
-    executeTestsWithCoverage(testToSourceFileMatches);
-  }
-
   private void processTestFileGeneration(File sourceFile, String framework, Map<File, String> completeMapping) {
     try {
       TestFileResponse response = modelPrompter.generateTestFile(sourceFile, framework);
-      logger.info("Output the response {}", new Gson().toJson(response));
-      File testFile = createTestFile(response);
-      completeMapping.put(testFile, sourceFile.getAbsolutePath());
+      if (response != null) {
+        logger.info("Output the response {}", new Gson().toJson(response));
+        File testFile = createTestFile(response);
+        completeMapping.put(testFile, sourceFile.getAbsolutePath());
+      } else {
+        logger.warn("Received null response for source file {}", sourceFile);
+      }
     } catch (CoverError e) {
       logger.error("Failed to generate test file for source file {}", sourceFile, e);
     }
-  }
-
   private File createTestFile(TestFileResponse response) throws CoverError {
+    String path = response.path();
+    String fileName = response.fileName();
+
+    if (path == null || path.isEmpty() || fileName == null || fileName.isEmpty()) {
+      throw new CoverError("Invalid path or file name for test file: path=" + path + ", fileName=" + fileName);
+    }
+
     try {
-      File testFile = new File(response.path(), response.fileName());
+      File testFile = new File(path, fileName);
       File parentDir = testFile.getParentFile();
 
       if (!parentDir.exists() && !parentDir.mkdirs()) {
@@ -284,35 +301,59 @@ public class CoverageAi {
       Files.writeString(testFile.toPath(), response.contents());
       return testFile;
     } catch (IOException e) {
-      throw new CoverError("Failed to create test file: " + response.fileName(), e);
-    }
-  }
-
-
-  private void testJavaCompileCommand() {
-    JavaCompile javaCompileTask = project.getTasks().withType(JavaCompile.class).findByName("compileTestJava");
-    StringBuilder builder = new StringBuilder();
-    if (javaTestClassPath.isPresent()) {
-      builder.append(JAVAC_COMMAND);
-      for (String arg : javaCompileTask.getOptions().getAllCompilerArgs()) {
-        builder.append(arg).append(" ");
+    if (javaCompileTask != null) {
+      StringBuilder builder = new StringBuilder();
+      if (javaTestClassPath.isPresent()) {
+        builder.append(JAVAC_COMMAND);
+        for (String arg : javaCompileTask.getOptions().getAllCompilerArgs()) {
+          builder.append(arg).append(" ");
+        }
+        builder.append("-d ").append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath())
+            .append(" ");
+        builder.append("-classpath ");
+        builder.append(javaTestClassPath.get());
+        builder.append(" ");
+        for (File sourceFile : javaCompileTask.getSource().getFiles()) {
+          builder.append(sourceFile.getAbsolutePath()).append(" ");
+        }
+        String compileCommand = builder.toString();
+        javaTestCompileCommand = Optional.ofNullable(compileCommand);
+        logger.debug("Executing javac command: {}", compileCommand);
+      } else {
+        logger.error("No Java test class path provided");
       }
-      builder.append("-d ").append(javaCompileTask.getDestinationDirectory().get().getAsFile().getAbsolutePath())
-          .append(" ");
-      builder.append("-classpath ");
-      builder.append(javaTestClassPath.get());
-      builder.append(" ");
-      for (File sourceFile : javaCompileTask.getSource().getFiles()) {
-        builder.append(sourceFile.getAbsolutePath()).append(" ");
-      }
-      String compileCommand = builder.toString();
-      javaTestCompileCommand = Optional.ofNullable(compileCommand);
-      logger.debug("Executing javac command: {}", compileCommand);
     } else {
       logger.error("No JavaCompile task found!");
     }
-  }
 
+    if (javaCompileCommand.isPresent() && javaTestCompileCommand.isPresent()) {
+      for (Map.Entry<File, String> entry : testToSourceMap.entrySet()) {
+        try {
+          String javaAgentCommand = javaAgentCommand(jacocoExecPath);
+          String jacocoJavaReportCommand = jacocoJavaReport(jacocoReportPath, jacocoExecPath);
+
+          deleteFileIfExists(jacocoReportPath);
+          deleteFileIfExists(jacocoExecPath);
+
+          String testFile = entry.getKey().getAbsolutePath();
+          String sourceFile = entry.getValue();
+
+          String command =
+              String.format("%s;%s;%s;%s", javaCompileCommand.get(), javaTestCompileCommand.get(), javaAgentCommand,
+                  jacocoJavaReportCommand);
+
+          String success =
+              coverageAiExecutor.execute(this.project, sourceFile, testFile, jacocoReportPath, command, projectPath);
+
+          logger.debug("Success output from coverage-ai: {}", success);
+        } catch (CoverError e) {
+          logger.error("Failed to execute coverage for test file {} with source file {}", entry.getKey(),
+              entry.getValue(), e);
+        }
+      }
+    } else {
+      logger.error("Java compile command or Java test compile command is not present.");
+    }
   private void executeTestsWithCoverage(Map<File, String> testToSourceMap) {
     String jacocoReportPath = buildDirectory + "/jacocoTestReport.xml";
     String jacocoExecPath = buildDirectory + "/test.exec";
@@ -326,11 +367,15 @@ public class CoverageAi {
 
         String testFile = entry.getKey().getAbsolutePath();
         String sourceFile = entry.getValue();
-
-        String command =
-            String.format("%s;%s;%s;%s", javaCompileCommand.get(), javaTestCompileCommand.get(), javaAgentCommand,
-                jacocoJavaReportCommand);
-
+        if (testInfoResponse != null) {
+          String sourceFile = testInfoResponse.filepath();
+          testToSourceMap.put(testFile, sourceFile);
+          remainingSourceFiles.removeIf(file -> file.getAbsolutePath().equals(sourceFile));
+          logger.info("Found matching source file {} for test file {}", sourceFile, testFile);
+          logger.info("Remaining unmatched source files: {}", remainingSourceFiles.size());
+        } else {
+          logger.warn("No matching source file found for test file {}", testFile);
+        }
         String success =
             coverageAiExecutor.execute(this.project, sourceFile, testFile, jacocoReportPath, command, projectPath);
 
